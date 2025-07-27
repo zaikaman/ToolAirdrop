@@ -122,6 +122,30 @@ class GoogleSheetsAPI:
             return 2  # Hàng 1 là header, bắt đầu từ hàng 2
         return len(data) + 1
     
+    def find_email_ready_row(self):
+        """Tìm hàng có Email nhưng chưa có MetaMask/Twitter"""
+        data = self.read_sheet_data()
+        if not data:
+            return None
+        
+        # Bỏ qua header (hàng đầu tiên)
+        for i, row in enumerate(data[1:], start=2):
+            # Kiểm tra: có email (cột A) nhưng chưa có metamask (cột B) hoặc twitter (cột C)
+            if (len(row) > 0 and row[0] != '' and  # Có email
+                (len(row) <= 1 or row[1] == '') and  # Chưa có metamask
+                (len(row) <= 2 or row[2] == '')):    # Chưa có twitter
+                
+                return {
+                    'row_index': i,
+                    'email': row[0],
+                    'metamask': row[1] if len(row) > 1 else '',
+                    'twitter': row[2] if len(row) > 2 else '',
+                    'status_x': row[3] if len(row) > 3 else '',
+                    'done': row[4] if len(row) > 4 else ''
+                }
+        
+        return None
+    
     def find_empty_row(self):
         """Tìm hàng trống để ghi dữ liệu mới"""
         data = self.read_sheet_data()

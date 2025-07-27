@@ -9,6 +9,9 @@ GOOGLE_SHEETS_TOKEN_FILE = 'token.json'
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID', '')
 SHEET_NAME = 'Onefootball Club'  # Tên sheet chứa dữ liệu tài khoản
 
+# Gemini AI API
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
 # Chrome Configuration  
 CHROME_PROFILES_DIR = './chrome_profiles'
 CHROME_EXECUTABLE_PATH = None  # Auto detect
