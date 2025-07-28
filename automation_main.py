@@ -176,10 +176,45 @@ def main():
                     print(f"📧 Email cần đăng ký: {email}")
                     print(f"🔐 Mật khẩu: Lovelybaby93")
                 
-                # Đợi user hoàn thành đăng ký
-                chrome.wait_user("Hoàn thành đăng ký Outlook và nhấn Enter để tiếp tục...")
+                                # Đã hoàn thành automation X.com trong bước trước
+                # User ấn Enter nghĩa là đã hoàn thành X.com rồi
+                print(f"\n🦊 BƯỚC TIẾP THEO: CÀI ĐẶT METAMASK")
+                print(f"="*45)
+                
+                # Cài đặt MetaMask extension
+                metamask_success = chrome.open_metamask_extension()
+                
+                if metamask_success:
+                    print(f"\n🎉 ĐÃ CÀI ĐẶT METAMASK!")
+                    print(f"✅ Outlook: {email}")
+                    print(f"✅ X.com: {email.split('@')[0]}")
+                    print(f"✅ MetaMask: Đã cài đặt extension")
+                    print(f"\n🔄 Tiếp tục setup MetaMask...")
+                    
+                    # Setup MetaMask
+                    setup_success = chrome.setup_metamask()
+                    if setup_success:
+                        print(f"✅ Đã setup MetaMask!")
+                        
+                        # Tạo wallet
+                        wallet_success = chrome.create_metamask_wallet()
+                        if wallet_success:
+                            print(f"\n🎉 HOÀN THÀNH TẤT CẢ!")
+                            print(f"✅ Outlook: {email}")
+                            print(f"✅ X.com: {email.split('@')[0]}")  
+                            print(f"✅ MetaMask: Đã tạo wallet và lưu seed phrase")
+                        else:
+                            print(f"⚠️ Hãy tạo wallet MetaMask thủ công")
+                    else:
+                        print(f"⚠️ Hãy setup MetaMask thủ công")
+                else:
+                    print(f"\n⚠️ Hãy cài MetaMask thủ công:")
+                    print(f"🦊 Vào Chrome Web Store và cài MetaMask")
                 
                 # TODO: Thêm logic cập nhật Google Sheets sau khi hoàn thành
+                
+                # Đợi user trước khi đóng
+                chrome.wait_user("Hoàn thành tất cả và nhấn Enter để đóng Chrome...")
                 
             # Đóng Chrome
             chrome.close()

@@ -25,12 +25,31 @@ class SimpleUndetectedChrome:
             print(f"📧 Email: {email}")
         
         try:
-            # Simple options
+            # Simple options với allow pop-ups
             options = uc.ChromeOptions()
             options.add_argument("--start-maximized")
             options.add_argument("--no-first-run")
             
-            print("🚀 Khởi tạo Chrome...")
+            # Cho phép pop-ups và vô hiệu hóa popup blocker
+            options.add_argument("--disable-popup-blocking")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--allow-running-insecure-content")
+            
+            # Thiết lập prefs để cho phép pop-ups và notifications
+            prefs = {
+                "profile.default_content_setting_values": {
+                    "popups": 1,  # 1 = allow, 2 = block
+                    "notifications": 1,
+                    "geolocation": 1,
+                    "media_stream": 1
+                },
+                "profile.managed_default_content_settings": {
+                    "popups": 1
+                }
+            }
+            options.add_experimental_option("prefs", prefs)
+            
+            print("🚀 Khởi tạo Chrome với allow pop-ups...")
             
             # Tạo driver
             self.driver = uc.Chrome(
@@ -468,17 +487,17 @@ class SimpleUndetectedChrome:
             return False
     
     def wait_and_click_skip_button(self, timeout_minutes=10):
-        """Liên tục tìm kiếm và click tất cả nút 'Skip for now' cho đến khi không còn nữa"""
+        """Tìm và click tối đa 2 nút 'Skip for now', sau đó chuyển sang X.com"""
         try:
             print(f"🔍 Bắt đầu tìm kiếm nút 'Skip for now'...")
             print(f"⏰ Thời gian tối đa: {timeout_minutes} phút")
             print(f"👤 Trong lúc này bạn hãy hoàn thành human verification")
-            print(f"🔄 Sẽ tiếp tục tìm và click cho đến khi không còn nút 'Skip for now' nữa")
+            print(f"🔄 Sẽ click tối đa 2 nút 'Skip for now'")
             
             import time
             start_time = time.time()
             timeout_seconds = timeout_minutes * 60
-            check_interval = 3  # Tăng lên 3 giây như yêu cầu
+            check_interval = 3
             
             skip_selectors = [
                 'button[data-testid="secondaryButton"]',
@@ -487,29 +506,29 @@ class SimpleUndetectedChrome:
                 '.fui-Button:contains("Skip for now")'
             ]
             
-            total_clicks = 0  # Đếm số lần click
+            total_clicks = 0
+            max_clicks = 2  # Tối đa 2 lần click
             
-            while True:
+            while total_clicks < max_clicks:
                 current_time = time.time()
                 elapsed = current_time - start_time
                 
                 # Kiểm tra timeout
                 if elapsed > timeout_seconds:
                     print(f"\n⏰ Hết thời gian chờ ({timeout_minutes} phút)")
-                    print(f"🎯 Đã click {total_clicks} nút 'Skip for now'")
+                    print(f"🎯 Đã click {total_clicks}/{max_clicks} nút 'Skip for now'")
                     return total_clicks > 0
                 
                 # Hiển thị thời gian đã trôi qua
                 minutes_elapsed = int(elapsed // 60)
                 seconds_elapsed = int(elapsed % 60)
-                print(f"🔄 Đang tìm... ({minutes_elapsed:02d}:{seconds_elapsed:02d}) - Đã click {total_clicks} lần", end='\r')
+                print(f"🔄 Đang tìm... ({minutes_elapsed:02d}:{seconds_elapsed:02d}) - Đã click {total_clicks}/{max_clicks} lần", end='\r')
                 
                 # Tìm nút Skip for now
                 skip_button = None
                 for selector in skip_selectors:
                     try:
                         if ":contains(" in selector:
-                            # Sử dụng xpath cho contains - cụ thể hơn
                             if "Skip for now" in selector:
                                 xpath = f"//button[normalize-space(text())='Skip for now']"
                             elif "Skip" in selector:
@@ -519,10 +538,8 @@ class SimpleUndetectedChrome:
                             
                             elements = self.driver.find_elements(By.XPATH, xpath)
                             
-                            # Kiểm tra từng element để tìm đúng cái cần
                             for element in elements:
                                 if element.is_displayed() and element.is_enabled():
-                                    # Kiểm tra text chính xác
                                     if "Skip for now" in element.text:
                                         skip_button = element
                                         break
@@ -543,7 +560,7 @@ class SimpleUndetectedChrome:
                 
                 if skip_button:
                     try:
-                        print(f"\n✅ Tìm thấy nút 'Skip for now' (lần {total_clicks + 1})")
+                        print(f"\n✅ Tìm thấy nút 'Skip for now' (lần {total_clicks + 1}/{max_clicks})")
                         print(f"🎯 Element text: '{skip_button.text}'")
                         print(f"🖱️ Click vào nút 'Skip for now'...")
                         
@@ -551,7 +568,7 @@ class SimpleUndetectedChrome:
                         self.driver.execute_script("arguments[0].scrollIntoView(true);", skip_button)
                         time.sleep(1)
                         
-                        # Thử click bằng JavaScript nếu click thường không work
+                        # Click
                         try:
                             skip_button.click()
                         except:
@@ -559,24 +576,24 @@ class SimpleUndetectedChrome:
                             self.driver.execute_script("arguments[0].click();", skip_button)
                         
                         total_clicks += 1
-                        print(f"✅ Đã click 'Skip for now' lần {total_clicks}!")
+                        print(f"✅ Đã click 'Skip for now' lần {total_clicks}/{max_clicks}!")
                         
-                        # Đợi 3 giây trước khi tiếp tục tìm
-                        time.sleep(3)
+                        # Nếu đã click 2 lần thì dừng luôn
+                        if total_clicks >= max_clicks:
+                            print(f"\n🎯 Đã click đủ {max_clicks} lần 'Skip for now'")
+                            print(f"🐦 Chuyển sang X.com...")
+                            return True
                         
-                    except Exception as e:
-                        print(f"❌ Lỗi click nút Skip: {e}")
-                        # Tiếp tục tìm kiếm
-                else:
-                    # Không tìm thấy nút nào, kiểm tra thêm vài lần trước khi kết thúc
-                    if total_clicks > 0:
-                        print(f"\n🔍 Không tìm thấy nút 'Skip for now' nữa, đợi thêm...")
-                        # Đợi thêm 3 lần check để đảm bảo
+                        # Sau lần click đầu, đợi trang load và kiểm tra thêm 3 giây
+                        print(f"⏳ Đợi trang load và kiểm tra thêm 3 giây...")
+                        time.sleep(5)  # Đợi trang load
+                        
+                        # Kiểm tra thêm 3 giây có nút Skip for now nữa không
+                        found_again = False
                         for i in range(3):
-                            time.sleep(3)
+                            time.sleep(1)
+                            print(f"🔍 Kiểm tra thêm... ({i+1}/3s)", end='\r')
                             
-                            # Tìm lại
-                            found_again = False
                             for selector in skip_selectors:
                                 try:
                                     if ":contains(" in selector:
@@ -593,16 +610,26 @@ class SimpleUndetectedChrome:
                                     continue
                             
                             if found_again:
-                                print(f"🔍 Tìm thấy lại nút 'Skip for now', tiếp tục...")
+                                print(f"\n🔍 Tìm thấy lại nút 'Skip for now'!")
                                 break
                         
                         if not found_again:
-                            print(f"\n🎉 Hoàn thành! Đã click {total_clicks} nút 'Skip for now'")
+                            print(f"\n🎉 Hoàn thành Outlook sau {total_clicks} lần click!")
                             print(f"✅ Không còn nút 'Skip for now' nào nữa")
+                            print(f"🐦 Chuyển sang X.com...")
                             return True
+                        
+                    except Exception as e:
+                        print(f"❌ Lỗi click nút Skip: {e}")
+                        # Tiếp tục tìm kiếm
                 
                 # Đợi trước khi check lần tiếp theo
                 time.sleep(check_interval)
+            
+            # Nếu ra khỏi vòng lặp (đã click đủ 2 lần)
+            print(f"\n🎯 Đã hoàn thành với {total_clicks} lần click 'Skip for now'")
+            print(f"🐦 Chuyển sang X.com...")
+            return True
                 
         except Exception as e:
             print(f"❌ Lỗi trong quá trình tìm Skip button: {e}")
@@ -823,6 +850,10 @@ class SimpleUndetectedChrome:
     def select_x_birthday_images(self, email):
         """Chọn ngày sinh trên X.com bằng PyAutoGUI images"""
         try:
+            import pyautogui
+            import os
+            import time
+            
             print(f"📅 Chọn ngày sinh trên X.com bằng ảnh...")
             
             # Lưu email vào instance variable để dùng trong các method khác
@@ -1040,47 +1071,35 @@ class SimpleUndetectedChrome:
                 print(f"❌ Không tìm thấy trường password")
                 return False
             
-            # 11. Tìm và click nút Sign up
-            print(f"\n📝 Tìm nút Sign up...")
+            # 11. Tìm và click nút Sign up bằng ảnh
+            print(f"\n📝 Tìm nút Sign up bằng ảnh...")
             time.sleep(2)
             
-            signup_selectors = [
-                'span:contains("Sign up")',
-                'button:contains("Sign up")',
-                'div:contains("Sign up")',
-                '[role="button"]:contains("Sign up")'
-            ]
-            
-            signup_button = None
-            for selector in signup_selectors:
-                try:
-                    print(f"🔍 Thử tìm Sign up với: {selector}")
-                    if ":contains(" in selector:
-                        # Sử dụng xpath cho contains
-                        xpath = f"//*[contains(text(), 'Sign up')]"
-                        signup_button = WebDriverWait(self.driver, 10).until(
-                            EC.element_to_be_clickable((By.XPATH, xpath))
-                        )
-                    else:
-                        signup_button = WebDriverWait(self.driver, 10).until(
-                            EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
-                        )
-                    print(f"✅ Tìm thấy Sign up button")
-                    break
-                except:
-                    continue
-            
-            if signup_button:
-                try:
-                    print(f"🖱️ Click Sign up...")
-                    signup_button.click()
+            try:
+                import pyautogui
+                signup_image_path = "./images/Signup.png"
+                
+                print(f"🔍 Tìm ảnh Signup.png...")
+                signup_location = pyautogui.locateOnScreen(signup_image_path, confidence=0.8)
+                
+                if signup_location:
+                    # Tính toán tọa độ trung tâm
+                    signup_center = pyautogui.center(signup_location)
+                    print(f"✅ Tìm thấy nút Sign up tại: {signup_center}")
+                    
+                    # Click vào nút
+                    pyautogui.click(signup_center)
+                    print(f"🖱️ Đã click nút Sign up!")
                     time.sleep(3)
-                    print(f"✅ Đã click Sign up!")
-                except Exception as e:
-                    print(f"❌ Lỗi click Sign up: {e}")
+                else:
+                    print(f"❌ Không tìm thấy ảnh Signup.png")
+                    print(f"💡 Hãy đảm bảo file ./images/Signup.png tồn tại")
+                    print(f"💡 Hoặc click nút Sign up thủ công")
                     return False
-            else:
-                print(f"❌ Không tìm thấy nút Sign up")
+                    
+            except Exception as e:
+                print(f"❌ Lỗi tìm/click ảnh Sign up: {e}")
+                print(f"💡 Hãy click nút Sign up thủ công")
                 return False
             
             print(f"\n🎉 ĐÃ HOÀN THÀNH TẤT CẢ BƯỚC ĐĂNG KÝ X.COM!")
